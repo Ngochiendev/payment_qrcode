@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:payment_qrcode/payment_qrcode.dart';
 
-/// Generates the UP IPayment QRCode
+/// Generates the UPI Payment QRCode with Neon Border
 class PaymentQRCode extends StatelessWidget {
   const PaymentQRCode({
-    Key? key,
+    super.key,
     this.size,
     this.loader,
     this.noBarcodeWidget,
@@ -20,59 +19,25 @@ class PaymentQRCode extends StatelessWidget {
     this.dataModuleStyle,
     this.qrCodeLoader,
     required this.qrCodeValue,
-  }) : super(key: key);
+    this.borderColor = const Color(0xFF31ABDF), // Màu mặc định cho viền neon
+    this.borderRadius = 8.0,
+    this.strokeWidth = 2.0,
+  });
 
-  /// The [size] parameter is completely a optional,
-  ///
-  /// Default value is null, It is basically for the QRCode width and height
-  ///
   final double? size;
-
-  @Deprecated("Please avoid using loader, since its not used no where")
-
-  /// The [loader] parameter is completely Optional,
-  ///
-  /// Default Circular Progress Loader will be shown
-  ///
   final Widget? loader;
-
-  @Deprecated("Please avoid using noBarcodeWidget, since its not used no where")
-
-  /// The [noBarcodeWidget] paramete is used, If No Barcode gets generated in that case you need to provide a message
-  ///
-  /// Default value is a Text message No Data Found for Barcode", It is basically for the QRCode width and height
-  ///
   final Widget? noBarcodeWidget;
-
-  /// The [embeddedImagePath] parameter is used to generate embedded asset image in the QR Code
-  ///
-  /// Default value is null, If no paramter is passed the image won't show
-  ///
   final String? embeddedImagePath;
-
-  /// The [embeddedImagePath] parameter is used to give size to embedded image in QR Code
-  ///
-  ///Default Value is null, If image is passed and [embeddedImagePath] value is not passed then it default value is Size(40, 40)
-  ///
   final Size? embeddedImageSize;
-
-  /// The [QrErrorCorrectLevel] parameter is used to avoid error in QRCode, the more high the Correct Level
-  /// less the error in QRCode data while scanning.
   final QRErrorCorrectLevel? QrErrorCorrectLevel;
-
-  /// The [qrErrorStateBuilder] parameter is used to when there is an error in rendering the QRCode
   final Widget Function(BuildContext, Object?)? qrErrorStateBuilder;
-
-  /// The [eyeStyle] parameter is used to change the eye style of the QRCode
   final QrEyeStyle? eyeStyle;
-
-  /// The [dataModuleStyle] parameter is used to change the data module style of the QRCode
   final QrDataModuleStyle? dataModuleStyle;
-
-  /// The [qrCodeLoader] parameter is used to load the QRCode when it is being generated
   final Widget? qrCodeLoader;
-
   final String qrCodeValue;
+  final Color borderColor;
+  final double borderRadius;
+  final double strokeWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -86,15 +51,35 @@ class PaymentQRCode extends StatelessWidget {
         if (!snapshot.hasData) {
           return qrCodeLoader ?? const CircularProgressIndicator();
         }
-        return _qrPainter(snapshot.data);
+        return _buildNeonBorder(_qrPainter(snapshot.data));
       },
     );
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: embeddedImagePath == null ? _qrPainter(null) : qrFutureBuilder,
-    );
+    return embeddedImagePath == null
+        ? _buildNeonBorder(_qrPainter(null))
+        : qrFutureBuilder;
+  }
+
+  /// Hàm này bao bọc mã QR bằng hiệu ứng viền neon
+  Widget _buildNeonBorder(Widget qrCodeWidget) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final double adjustedPadding = (size.hashCode * 0.05).clamp(5.0, 15.0);
+      return CustomPaint(
+        painter: NeonBorderPainter(
+          borderColor: borderColor,
+          borderRadius: borderRadius,
+          strokeWidth: strokeWidth,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(adjustedPadding),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: qrCodeWidget,
+          ),
+        ),
+      );
+    });
   }
 
   CustomPaint _qrPainter(ui.Image? image) {
@@ -129,4 +114,49 @@ class PaymentQRCode extends StatelessWidget {
     ui.decodeImageFromList(byteData.buffer.asUint8List(), completer.complete);
     return completer.future;
   }
+}
+
+class NeonBorderPainter extends CustomPainter {
+  final Color borderColor;
+  final double borderRadius;
+  final double strokeWidth;
+
+  NeonBorderPainter({
+    required this.borderColor,
+    required this.borderRadius,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..shader = const SweepGradient(
+        colors: [
+          Color(0xFF31ABDF), // Primary cool blue
+          Color.fromARGB(255, 80, 228, 206), // Aqua Neon
+          Color.fromARGB(255, 196, 78, 226), // Neon Purple
+          Color.fromARGB(255, 120, 200, 250), // Sky Blue
+          Color.fromARGB(255, 196, 78, 226), // Neon Purple
+          Color(0xFF31ABDF), // Back to primary cool blue
+        ],
+        stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    final Rect rect = Rect.fromLTWH(
+      strokeWidth / 2,
+      strokeWidth / 2,
+      size.width - strokeWidth,
+      size.height - strokeWidth,
+    );
+    final RRect rrect = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(borderRadius),
+    );
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

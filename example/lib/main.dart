@@ -7,7 +7,7 @@ void main() {
 
 /// Creates The UPI Payment QRCode
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -66,7 +66,7 @@ class _MyAppState extends State<MyApp> {
                 qrCodeValue:
                     "000201010212262400069704890110010114877152020153037045405220005802VN5910CTY DTSOFT6005HANOI62820321TRUONG TH LE VAN VIET052201000000000000000000010705012340818DTS0004794510423HP63047C17",
                 embeddedImagePath: 'assets/images/logo.png',
-                size: 220,
+                size: 280,
                 QrErrorCorrectLevel: QRErrorCorrectLevel.low,
               ),
               Text(
